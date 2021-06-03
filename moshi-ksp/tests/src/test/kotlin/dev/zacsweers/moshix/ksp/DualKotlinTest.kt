@@ -363,7 +363,7 @@ class DualKotlinTest(useReflection: Boolean) {
   abstract class AssetMetaData<A : Asset<A>>
 
   @Test fun selfReferencingTypeVars() {
-    val adapter = moshi.adapter<Node<StringNodeNumberNode, NumberStringNode>>()
+    val adapter = moshi.adapter<StringNodeNumberNode>()
 
     val data = StringNodeNumberNode().also {
       it.t = StringNodeNumberNode().also {
@@ -382,7 +382,7 @@ class DualKotlinTest(useReflection: Boolean) {
     }
     // TODO: this fails
     assertThat(adapter.toJson(data)).isEqualTo("""
-      {"text":"root", "t":{"text":"child 1"},"r":{"number":0,"t":{"number":1},"r":{"text":"grand child 1"}}}
+      {"text":"root","t":{"text":"child 1"},"r":{"number":0,"t":{"number":1},"r":{"text":"grand child 1"}}}
     """.trimIndent())
   }
 
