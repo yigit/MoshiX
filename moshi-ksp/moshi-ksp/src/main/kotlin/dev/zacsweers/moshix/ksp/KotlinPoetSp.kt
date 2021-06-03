@@ -28,6 +28,7 @@ import com.google.devtools.ksp.symbol.Variance.CONTRAVARIANT
 import com.google.devtools.ksp.symbol.Variance.COVARIANT
 import com.google.devtools.ksp.symbol.Variance.INVARIANT
 import com.google.devtools.ksp.symbol.Variance.STAR
+import com.squareup.kotlinpoet.ANY
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.KModifier
@@ -87,14 +88,30 @@ internal fun List<KSTypeParameter>.toTypeParameterResolver(
     override operator fun get(index: String): TypeVariableName = typeParamResolver(index)
   }
 
+  val mutableBounds = mutableMapOf<String, MutableList<TypeName>>()
+  for(typeVar in this) {
+    val id = typeVar.name.getShortName()
+    val bounds = mutableListOf<TypeName>()
+    val tmpTypeName = TypeVariableName(
+      name = id,
+      bounds = bounds
+    )
+    parametersMap[id] = tmpTypeName
+    mutableBounds[id] = bounds
+  }
   // Fill the parametersMap. Need to do sequentially and allow for referencing previously defined params
   for (typeVar in this) {
     // Put the simple typevar in first, then it can be referenced in the full toTypeVariable()
     // replacement later that may add bounds referencing this.
     val id = typeVar.name.getShortName()
-    parametersMap[id] = TypeVariableName(id)
     // Now replace it with the full version.
-    parametersMap[id] = typeVar.toTypeVariableName(resolver)
+    val updated =  typeVar.toTypeVariableName(resolver)
+
+    val mutableBounds = mutableBounds[id] ?: error("where are my mutable bounds???")
+    mutableBounds.addAll(updated.bounds)
+    if (updated.bounds.isNotEmpty()) {
+      mutableBounds.remove(ANY.copy(nullable = true))
+    }
   }
 
   return resolver

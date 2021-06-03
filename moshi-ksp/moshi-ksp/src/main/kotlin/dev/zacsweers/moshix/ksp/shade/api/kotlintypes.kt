@@ -39,6 +39,7 @@ import com.squareup.kotlinpoet.UNIT
 import com.squareup.kotlinpoet.WildcardTypeName
 import com.squareup.kotlinpoet.asClassName
 import com.squareup.kotlinpoet.asTypeName
+import dev.zacsweers.moshix.ksp.toTypeParameterResolver
 import java.lang.reflect.Array
 
 internal fun TypeName.rawType(): ClassName {
@@ -200,6 +201,18 @@ internal fun List<TypeName>.toTypeVariableResolver(
     override operator fun get(index: String): TypeVariableName = typeParamResolver(index)
   }
 
+  val mutableBounds = mutableMapOf<String, MutableList<TypeName>>()
+  for(typeVar in this) {
+    check(typeVar is TypeVariableName)
+    val id = typeVar.name
+    val bounds = mutableListOf<TypeName>()
+    val tmpTypeName = TypeVariableName(
+      name = id,
+      bounds = bounds
+    )
+    parametersMap[id] = tmpTypeName
+    mutableBounds[id] = bounds
+  }
   // Fill the parametersMap. Need to do sequentially and allow for referencing previously defined params
   for (typeVar in this) {
     check(typeVar is TypeVariableName)
@@ -208,7 +221,12 @@ internal fun List<TypeName>.toTypeVariableResolver(
     val id = typeVar.name
     parametersMap[id] = TypeVariableName(id)
     // Now replace it with the full version.
-    parametersMap[id] = typeVar.deepCopy(null) { it.stripTypeVarVariance(resolver) }
+    val updated = typeVar.deepCopy(null) { it.stripTypeVarVariance(resolver) }
+    val mutableBounds = mutableBounds[id] ?: error("where are my mutable bounds???")
+    mutableBounds.addAll(updated.bounds)
+    if (updated.bounds.isNotEmpty()) {
+      mutableBounds.remove(ANY.copy(nullable = true))
+    }
   }
 
   return resolver

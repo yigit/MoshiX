@@ -791,6 +791,39 @@ class JsonClassSymbolProcessorTest(private val incremental: Boolean) {
     }
   }
 
+  @Test
+  fun selfReferencingType() {
+    val result = compile(
+      kotlin(
+        "source.kt",
+        """
+          package test
+          import com.squareup.moshi.JsonClass
+
+          import com.squareup.moshi.JsonClass
+          @JsonClass(generateAdapter = true)
+          open class Node<T : Node<T, R>, R : Node<R, T>> {
+            lateinit var t : T
+            lateinit var r : R
+          }
+        
+          @JsonClass(generateAdapter = true)
+          class StringNodeNumberNode(
+          ) : Node<StringNodeNumberNode, NumberStringNode>() {
+            var text: String = ""
+          }
+        
+          @JsonClass(generateAdapter = true)
+          class NumberStringNode(
+          ) : Node<NumberStringNode, StringNodeNumberNode>() {
+            var number: Int = 0
+          }
+          """
+      )
+    )
+    assertThat(result.exitCode).isEqualTo(KotlinCompilation.ExitCode.OK)
+  }
+
   private fun prepareCompilation(vararg sourceFiles: SourceFile): KotlinCompilation {
     return KotlinCompilation()
       .apply {
