@@ -39,6 +39,7 @@ import com.squareup.kotlinpoet.UNIT
 import com.squareup.kotlinpoet.WildcardTypeName
 import com.squareup.kotlinpoet.asClassName
 import com.squareup.kotlinpoet.asTypeName
+import dev.zacsweers.moshix.ksp.toTypeParameterResolver
 import java.lang.reflect.Array
 
 internal fun TypeName.rawType(): ClassName {
@@ -200,13 +201,20 @@ internal fun List<TypeName>.toTypeVariableResolver(
     override operator fun get(index: String): TypeVariableName = typeParamResolver(index)
   }
 
-  // Fill the parametersMap. Need to do sequentially and allow for referencing previously defined params
   for (typeVar in this) {
     check(typeVar is TypeVariableName)
     // Put the simple typevar in first, then it can be referenced in the full toTypeVariable()
     // replacement later that may add bounds referencing this.
     val id = typeVar.name
     parametersMap[id] = TypeVariableName(id)
+  }
+
+  // Fill the parametersMap. Need to do sequentially and allow for referencing previously defined params
+  for (typeVar in this) {
+    check(typeVar is TypeVariableName)
+    // Put the simple typevar in first, then it can be referenced in the full toTypeVariable()
+    // replacement later that may add bounds referencing this.
+    val id = typeVar.name
     // Now replace it with the full version.
     parametersMap[id] = typeVar.deepCopy(null) { it.stripTypeVarVariance(resolver) }
   }

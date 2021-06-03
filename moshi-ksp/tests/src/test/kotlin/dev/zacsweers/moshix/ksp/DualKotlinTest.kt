@@ -366,7 +366,9 @@ class DualKotlinTest(useReflection: Boolean) {
     val adapter = moshi.adapter<Node<StringNodeNumberNode, NumberStringNode>>()
 
     val data = StringNodeNumberNode().also {
-      it.t = StringNodeNumberNode()
+      it.t = StringNodeNumberNode().also {
+        it.text = "child 1"
+      }
       it.text = "root"
       it.r = NumberStringNode().also {
         it.number = 0
@@ -374,18 +376,20 @@ class DualKotlinTest(useReflection: Boolean) {
           it.number = 1
         }
         it.r = StringNodeNumberNode().also {
-          it.text = "child"
+          it.text = "grand child 1"
         }
       }
     }
-    // TODO fix this but since compiler doees not work, it does not matter now.
-    assertThat(adapter.toJson(data)).isNotEmpty()
+    // TODO: this fails
+    assertThat(adapter.toJson(data)).isEqualTo("""
+      {"text":"root", "t":{"text":"child 1"},"r":{"number":0,"t":{"number":1},"r":{"text":"grand child 1"}}}
+    """.trimIndent())
   }
 
   @JsonClass(generateAdapter = true)
   open class Node<T : Node<T, R>, R : Node<R, T>> {
-    lateinit var t : T
-    lateinit var r : R
+    var t : T? = null
+    var r : R? = null
   }
 
   @JsonClass(generateAdapter = true)

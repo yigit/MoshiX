@@ -78,21 +78,29 @@ internal fun List<KSTypeParameter>.toTypeParameterResolver(
   val typeParamResolver = { id: String ->
     parametersMap[id]
       ?: fallback?.get(id)
-      ?: throw IllegalStateException("No type argument found for $id! Anaylzing $sourceType")
+      ?: throw IllegalStateException("No type argument found for $id! Anaylzing $sourceType, ${parametersMap}")
   }
 
   val resolver = object : TypeParameterResolver {
     override val parametersMap: Map<String, TypeVariableName> = parametersMap
 
     override operator fun get(index: String): TypeVariableName = typeParamResolver(index)
+
+    override fun toString(): String {
+      return parametersMap.toString()
+    }
   }
 
-  // Fill the parametersMap. Need to do sequentially and allow for referencing previously defined params
   for (typeVar in this) {
     // Put the simple typevar in first, then it can be referenced in the full toTypeVariable()
     // replacement later that may add bounds referencing this.
     val id = typeVar.name.getShortName()
     parametersMap[id] = TypeVariableName(id)
+  }
+
+  // Fill the parametersMap. Need to do sequentially and allow for referencing previously defined params
+  for (typeVar in this) {
+    val id = typeVar.name.getShortName()
     // Now replace it with the full version.
     parametersMap[id] = typeVar.toTypeVariableName(resolver)
   }
