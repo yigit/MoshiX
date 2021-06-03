@@ -350,17 +350,23 @@ class DualKotlinTest(useReflection: Boolean) {
     val testJson =
       """{"text":"text"}"""
 
-    assertThat(adapter.toJson(TextAssetMetaData("text"))).isEqualTo(testJson)
+    val assetChild = TextAsset()
+    assertThat(adapter.toJson(TextAssetMetaData("text", assetChild))).isEqualTo(testJson)
 
     val result = adapter.fromJson(testJson)!!
     assertThat(result.text).isEqualTo("text")
   }
 
   @JsonClass(generateAdapter = true)
-  class TextAssetMetaData(val text: String) : AssetMetaData<TextAsset>()
+  class TextAssetMetaData(
+    val text: String,
+    data : TextAsset
+  ) : AssetMetaData<TextAsset>(data)
   class TextAsset : Asset<TextAsset>()
   abstract class Asset<A : Asset<A>>
-  abstract class AssetMetaData<A : Asset<A>>
+  abstract class AssetMetaData<A : Asset<A>>(
+    var data : A? = null
+  )
 
   // Regression test for https://github.com/square/moshi/issues/968
   @Test fun abstractSuperProperties() {
