@@ -362,6 +362,44 @@ class DualKotlinTest(useReflection: Boolean) {
   abstract class Asset<A : Asset<A>>
   abstract class AssetMetaData<A : Asset<A>>
 
+  @Test fun selfReferencingTypeVars() {
+    val adapter = moshi.adapter<Node<StringNodeNumberNode, NumberStringNode>>()
+
+    val data = StringNodeNumberNode().also {
+      it.t = StringNodeNumberNode()
+      it.text = "root"
+      it.r = NumberStringNode().also {
+        it.number = 0
+        it.t = NumberStringNode().also {
+          it.number = 1
+        }
+        it.r = StringNodeNumberNode().also {
+          it.text = "child"
+        }
+      }
+    }
+    // TODO fix this but since compiler doees not work, it does not matter now.
+    assertThat(adapter.toJson(data)).isNotEmpty()
+  }
+
+  @JsonClass(generateAdapter = true)
+  open class Node<T : Node<T, R>, R : Node<R, T>> {
+    lateinit var t : T
+    lateinit var r : R
+  }
+
+  @JsonClass(generateAdapter = true)
+  class StringNodeNumberNode(
+  ) : Node<StringNodeNumberNode, NumberStringNode>() {
+    var text: String = ""
+  }
+
+  @JsonClass(generateAdapter = true)
+  class NumberStringNode(
+  ) : Node<NumberStringNode, StringNodeNumberNode>() {
+    var number: Int = 0
+  }
+
   // Regression test for https://github.com/square/moshi/issues/968
   @Test fun abstractSuperProperties() {
     val adapter = moshi.adapter<InternalAbstractProperty>()
